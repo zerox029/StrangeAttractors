@@ -1,20 +1,30 @@
 import '../style.css'
 import * as THREE from 'three'
-import * as dat from 'dat.gui'
 import * as util from './util';
 import * as attractors from './attractors';
-import { Vector3 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { MeshLine, MeshLineMaterial } from 'three.meshline';
+import './menuGUI';
+import MenuGUI from './menuGUI';
 
 const SIZES = {
   width: window.innerWidth,
   height: window.innerHeight
 }
+const OPTIONS = { 
+  attractor: 'Lorenz', 
+  scale: .3, 
+  minVariation: -10, 
+  maxVariation: 10, 
+  attractorScale: 1, 
+  speed: 0.01, 
+  count: 200, 
+  trailLength: 40 
+}
 
 const canvas = document.querySelector('canvas.webgl')
 const scene = new THREE.Scene()
-const camera = new THREE.PerspectiveCamera(75, SIZES.width / SIZES.height, 0.1, 1000)
+const camera = new THREE.PerspectiveCamera(75, SIZES.width / SIZES.height, 0.1, 100000)
 const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true })
 
 // Loading textures
@@ -22,34 +32,18 @@ const loader = new THREE.TextureLoader()
 const circle = loader.load('./circle.png')
 
 // Materials
-const material = new THREE.PointsMaterial({ size: 0.005, color: 'white' });
-const trailMaterial = new MeshLineMaterial({color: 'rgb(186, 253, 255)', lineWidth: 0.1, sizeAttenuation: 1, map: circle})
+let material = new THREE.PointsMaterial({ color: 'white' });
+let trailMaterial = new MeshLineMaterial({color: 'rgb(246, 199, 255)', lineWidth: 0.1, sizeAttenuation: 1, map: circle})
 
 // Objects
-const POINT_COUNT = 200;
-const geometry = new THREE.SphereBufferGeometry(.2, 64, 64)
-
-const TRAIL_LENGTH = 40;
-var posArray = Array(POINT_COUNT)
-for(let i = 0; i < POINT_COUNT; i++)
-{
-  posArray[i] = Array(TRAIL_LENGTH * 3).fill(0);
-}
-
-const lines = Array(POINT_COUNT).fill(null).map(() => new MeshLine())
-lines.forEach((line, index) => {
-  line.setPoints(posArray[index]);
-});
+let geometry = new THREE.SphereBufferGeometry(OPTIONS.scale, 64, 64)
+let lines = generateTails();
 
 // Mesh
-var spheres = generatePoints(POINT_COUNT, -10, 10);
-const trailMeshes = Array(POINT_COUNT).fill(null);
-trailMeshes.forEach((trail, index) => {
-  trail = new THREE.Mesh(lines[index], trailMaterial);
-  scene.add(trail);
-})
+let spheres = generatePoints(OPTIONS.count, OPTIONS.minVariation, OPTIONS.maxVariation);
 
 // Controls
+const menuGUI = new MenuGUI(material, trailMaterial, OPTIONS, reloadAttractor);
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
 
@@ -70,6 +64,30 @@ function generatePoints(count, minimumDeviation, maximumDeviation) {
   }
 
   return points;
+}
+
+function generateTails()
+{
+  //The positions of every point in every trail
+  var posArray = Array(OPTIONS.count)
+  for(let i = 0; i < OPTIONS.count; i++)
+  {
+    posArray[i] = Array(OPTIONS.trailLength * 3).fill(0);
+  }
+
+  let lines = Array(OPTIONS.count).fill(null).map(() => new MeshLine());
+  lines.forEach((line, index) => {
+    line.setPoints(posArray[index]);
+  });
+
+  //Creating the mesh and adding to the scene
+  var trailMeshes = Array(OPTIONS.count).fill(null);
+  trailMeshes.forEach((trail, index) => {
+    trail = new THREE.Mesh(lines[index], trailMaterial);
+    scene.add(trail);
+  })
+  
+  return lines;
 }
 
 /**
@@ -103,21 +121,37 @@ function init ()
   })
 }
 
+function reloadAttractor(){
+  while(scene.children.length > 0){ 
+    scene.remove(scene.children[0]); 
+  }
+
+  geometry = new THREE.SphereBufferGeometry(OPTIONS.scale, 64, 64)
+  lines = generateTails();
+  spheres = generatePoints(OPTIONS.count, OPTIONS.minVariation, OPTIONS.maxVariation);
+}
+
 /**
  * Animate
  */
 function tick ()
 {
   spheres.forEach((sphere, index) => {
-    var newPosition = attractors.lorenzAttractor(sphere.position, 0.01, 1);
+    const attractorFunction = attractors.attractorNameToFunction(OPTIONS.attractor)
+    var newPosition = attractorFunction(sphere.position, OPTIONS.speed, OPTIONS.attractorScale);
 
     sphere.position.x = newPosition.x;
     sphere.position.y = newPosition.y;
     sphere.position.z = newPosition.z;
 
+    sphere.scale.x = OPTIONS.scale
+    sphere.scale.y = OPTIONS.scale
+    sphere.scale.z = OPTIONS.scale
+
     lines[index].advance(newPosition);
   });
 
+  material.needsUpdate = true;
   trailMaterial.needsUpdate = true;
 
   renderer.render(scene, camera)
@@ -125,31 +159,6 @@ function tick ()
   // Call tick again on the next frame
   window.requestAnimationFrame(tick)
 }
-
-class ColorGUIHelper {
-  constructor(object, prop) {
-    this.object = object;
-    this.prop = prop;
-  }
-  get value() {
-    return `#000000`;
-  }
-  set value(hexString) {
-    this.object[this.prop].set(hexString);
-  }
-}
-
-/**
- * GUI
- */
-const datGUI = new dat.GUI({autoPlace: true});
-datGUI.domElement.id = 'gui';
-
-datGUI.add()
-
-var trailsFolder = datGUI.addFolder('Trails');
-trailsFolder.add(trailMaterial, 'lineWidth', 0, 1, 0.01);
-trailsFolder.addColor(trailMaterial, 'color');
 
 init()
 tick()
