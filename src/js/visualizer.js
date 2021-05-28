@@ -1,10 +1,11 @@
 import '../style.css'
 import * as THREE from 'three'
 import * as dat from 'dat.gui'
-import './attractors/lorenzAttractor';
 import * as util from './util';
-import lorenzAttractor from './attractors/lorenzAttractor';
+import * as attractors from './attractors';
 import { Vector3 } from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+
 
 const SIZES = {
   width: window.innerWidth,
@@ -16,7 +17,7 @@ const gui = new dat.GUI()
 
 const canvas = document.querySelector('canvas.webgl')
 const scene = new THREE.Scene()
-const camera = new THREE.PerspectiveCamera(75, SIZES.width / SIZES.height, 0.1, 100)
+const camera = new THREE.PerspectiveCamera(75, SIZES.width / SIZES.height, 0.1, 1000)
 const renderer = new THREE.WebGLRenderer({canvas: canvas,alpha: true})
 
 // Materials
@@ -27,7 +28,7 @@ material.color = new THREE.Color("rgb(145, 242, 255)");
 const geometry = new THREE.SphereBufferGeometry(.1, 64, 64)
 
 // Mesh
-var spheres = generatePoints(5000, -1, 1)
+var spheres = generatePoints(10000, -10, 10)
 
 /**
  * Generate the spheres used by the attractor
@@ -47,6 +48,10 @@ function generatePoints(count, minimumDeviation, maximumDeviation) {
 
   return points;
 }
+
+// Controls
+const controls = new OrbitControls(camera, canvas)
+controls.enableDamping = true
 
 /**
  * Initialize the visualizer
@@ -86,7 +91,7 @@ function init ()
 function tick ()
 {
   spheres.forEach(sphere => {
-    var newPosition = lorenzAttractor(sphere.position);
+    var newPosition = attractors.halvorsenAttractor(sphere.position, 0.01, 1);
 
     sphere.position.x = newPosition.x;
     sphere.position.y = newPosition.y;
