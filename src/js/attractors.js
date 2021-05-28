@@ -42,16 +42,14 @@ export function aizawaAttractor(position, dt, factor)
 export function halvorsenAttractor(position, dt, factor)
 {
   const ALPHA = 1.4;
-  const BETA = 4;
 
   var x = position.x / factor;
   var y = position.y / factor;
   var z = position.z / factor;
 
-
-  var dx = (-ALPHA * x - BETA * y - BETA * z - y ** 2) * dt;
-  var dy = (-ALPHA * y - BETA * z - BETA * x - z ** 2) * dt;
-  var dz = (-ALPHA * z - BETA * x - BETA * y - x ** 2) * dt;
+  var dx = (-(ALPHA * x) - (4 * y) - (4 * z) - (y ** 2)) * dt;
+  var dy = (-(ALPHA * y) - (4 * z) - (4 * x) - (z ** 2)) * dt;
+  var dz = (-(ALPHA * z) - (4 * x) - (4 * y) - (x ** 2)) * dt;
 
   return new Vector3(position.x + dx, position.y + dy, position.z + dz);
 }

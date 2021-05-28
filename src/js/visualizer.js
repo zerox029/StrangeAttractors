@@ -27,7 +27,7 @@ const trailMaterial = new MeshLineMaterial({color: 'rgb(186, 253, 255)', lineWid
 
 // Objects
 const POINT_COUNT = 200;
-const geometry = new THREE.SphereBufferGeometry(.1, 64, 64)
+const geometry = new THREE.SphereBufferGeometry(.2, 64, 64)
 
 const TRAIL_LENGTH = 40;
 var posArray = Array(POINT_COUNT)
@@ -40,8 +40,6 @@ const lines = Array(POINT_COUNT).fill(null).map(() => new MeshLine())
 lines.forEach((line, index) => {
   line.setPoints(posArray[index]);
 });
-
-console.log(lines[0] == lines[1])
 
 // Mesh
 var spheres = generatePoints(POINT_COUNT, -10, 10);
@@ -110,9 +108,8 @@ function init ()
  */
 function tick ()
 {
-  
   spheres.forEach((sphere, index) => {
-    var newPosition = attractors.aizawaAttractor(sphere.position, 0.1, 10);
+    var newPosition = attractors.lorenzAttractor(sphere.position, 0.01, 1);
 
     sphere.position.x = newPosition.x;
     sphere.position.y = newPosition.y;
@@ -121,11 +118,38 @@ function tick ()
     lines[index].advance(newPosition);
   });
 
+  trailMaterial.needsUpdate = true;
+
   renderer.render(scene, camera)
 
   // Call tick again on the next frame
   window.requestAnimationFrame(tick)
 }
+
+class ColorGUIHelper {
+  constructor(object, prop) {
+    this.object = object;
+    this.prop = prop;
+  }
+  get value() {
+    return `#000000`;
+  }
+  set value(hexString) {
+    this.object[this.prop].set(hexString);
+  }
+}
+
+/**
+ * GUI
+ */
+const datGUI = new dat.GUI({autoPlace: true});
+datGUI.domElement.id = 'gui';
+
+datGUI.add()
+
+var trailsFolder = datGUI.addFolder('Trails');
+trailsFolder.add(trailMaterial, 'lineWidth', 0, 1, 0.01);
+trailsFolder.addColor(trailMaterial, 'color');
 
 init()
 tick()
